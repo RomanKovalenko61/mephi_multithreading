@@ -17,8 +17,12 @@ public class Task1 {
         b = scanner.nextDouble();
         System.out.println("Введите значение c");
         c = scanner.nextDouble();
+        if (c < 0) throw new IllegalArgumentException("Число для вычисления логарифма не может быть меньше нуля");
         System.out.println("Введите значение d");
         d = scanner.nextDouble();
+        if (d < 0)
+            throw new IllegalArgumentException("Число для вычисления квадратного корня не может быть меньше нуля");
+        if (d == 0) throw new IllegalArgumentException("В контексте формулы число не может быть равно нулю");
 
         System.out.println("Вычисляю результат...");
 
@@ -53,6 +57,8 @@ public class Task1 {
         System.out.println("Calculating sum of squares: " + sumOfSquares.join());
         System.out.println("Calculating sqrt(d): " + sqrtD.join());
         System.out.println("Calculating log(c): " + logC.join());
-        System.out.println("Final result of the formula: " + sumOfSquares.join() * logC.join() / sqrtD.join());
+        CompletableFuture<Double> intermediate = sumOfSquares.thenCombine(logC, (result1, result2) -> result1 * result2);
+        CompletableFuture<Double> result = intermediate.thenCombine(sqrtD, (result1, result2) -> result1 / result2);
+        System.out.println("Final result of the formula: " + result.join());
     }
 }
