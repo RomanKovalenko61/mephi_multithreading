@@ -8,7 +8,8 @@ import java.util.concurrent.TimeUnit;
 public class Task3 {
     public static void main(String[] args) {
         int[][] matrix = {
-                {}
+                {1, 2, 3},
+                {4, 5, 6}
         };
 
         System.out.println(Arrays.deepToString(matrix));
@@ -30,7 +31,7 @@ public class Task3 {
             for (int i = 0; i < colA; i++) {
                 final int currentRow = i;
                 for (int j = 0; j < rowsA; j++) {
-                    int currentCol = j;
+                    final int currentCol = j;
                     executor.execute(() -> result[currentRow][currentCol] = a[currentCol][currentRow]);
                 }
             }
