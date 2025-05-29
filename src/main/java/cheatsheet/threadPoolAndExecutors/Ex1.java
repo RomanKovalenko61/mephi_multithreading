@@ -1,4 +1,4 @@
-package cheatsheet.ThreadPoolAndExecutors;
+package cheatsheet.threadPoolAndExecutors;
 
 import java.util.Arrays;
 import java.util.List;

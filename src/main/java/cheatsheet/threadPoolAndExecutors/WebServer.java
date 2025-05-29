@@ -1,4 +1,4 @@
-package cheatsheet.ThreadPoolAndExecutors;
+package cheatsheet.threadPoolAndExecutors;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;

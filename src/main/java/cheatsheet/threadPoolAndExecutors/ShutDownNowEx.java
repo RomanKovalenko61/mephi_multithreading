@@ -1,4 +1,4 @@
-package cheatsheet.ThreadPoolAndExecutors;
+package cheatsheet.threadPoolAndExecutors;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
