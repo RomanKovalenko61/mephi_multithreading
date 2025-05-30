@@ -2,8 +2,11 @@ package research.part1;
 
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.logging.Logger;
 
 public class CustomThreadPool implements CustomExecutor {
+    private static final Logger LOG = Logger.getLogger(CustomThreadPool.class.getName());
+
     private int corePoolSize;
     private int maxPoolSize;
     private int keepAliveTime;
@@ -45,7 +48,7 @@ public class CustomThreadPool implements CustomExecutor {
 
     @Override
     public void execute(Runnable command) {
-        System.out.println("[Pool] Добавление задачи в очередь");
+        LOG.info("[Pool] Добавление задачи в очередь");
         workQueue.add(command);
     }
 

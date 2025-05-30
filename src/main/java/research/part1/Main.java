@@ -2,8 +2,11 @@ package research.part1;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class Main {
+    private static final Logger LOG = Logger.getLogger(Main.class.getName());
+
     public static void main(String[] args) throws InterruptedException {
         CustomThreadPool threadPool = new CustomThreadPool(2, 4, 10, TimeUnit.SECONDS, 10, 2);
 
@@ -11,7 +14,7 @@ public class Main {
             final int taskNumber = i;
             threadPool.execute(() -> {
                 randomSleep();
-                System.out.println("[Main] Task #" + taskNumber + " is running in " + Thread.currentThread().getName());
+                LOG.info("[Main] Task #" + taskNumber + " is running in " + Thread.currentThread().getName());
             });
         }
 

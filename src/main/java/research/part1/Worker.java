@@ -2,8 +2,11 @@ package research.part1;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class Worker implements Runnable {
+    private static final Logger LOG = Logger.getLogger(Worker.class.getName());
+
     private final BlockingQueue<Runnable> queue;
     private volatile boolean isTerminated;
     private final long keepAliveTime;
@@ -22,11 +25,11 @@ public class Worker implements Runnable {
             try {
                 Runnable task = queue.poll(keepAliveTime, keepAliveTimeUnit);
                 if (task != null) {
-                    System.out.println("[Worker] " + Thread.currentThread().getName() + " начинает выполнение задачи.");
+                    LOG.info("[Worker] " + Thread.currentThread().getName() + " начинает выполнение задачи.");
                     task.run();
-                    System.out.println("[Worker] " + Thread.currentThread().getName() + " завершил выполнение задачи.");
+                    LOG.info("[Worker] " + Thread.currentThread().getName() + " завершил выполнение задачи.");
                 } else {
-                    System.out.println("[Worker] " + Thread.currentThread().getName() + " время ожидания истекло, завершение работы.");
+                    LOG.info("[Worker] " + Thread.currentThread().getName() + " время ожидания истекло, завершение работы.");
                     break;
                 }
             } catch (InterruptedException e) {
