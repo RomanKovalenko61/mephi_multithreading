@@ -8,9 +8,10 @@ public class Main {
     private static final Logger LOG = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) throws InterruptedException {
-        CustomThreadPool threadPool = new CustomThreadPool(2, 4, 10, TimeUnit.SECONDS, 10, 2);
+        CustomThreadPool threadPool = new CustomThreadPool(2, 5, 10, TimeUnit.SECONDS, 10, 2);
+        threadPool.setRejectPolicy(new CallerRunsPolicy());
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 20; i++) {
             final int taskNumber = i;
             threadPool.execute(() -> {
                 randomSleep();
@@ -20,11 +21,14 @@ public class Main {
 
         Thread.sleep(3000);
         threadPool.shutdown();
+        threadPool.execute(() -> {
+            System.out.println("!!!! Task after shutdown attempt.");
+        });
     }
 
     public static void randomSleep() {
         try {
-            Thread.sleep(new Random().nextInt(1000));
+            Thread.sleep(new Random().nextInt(10000));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

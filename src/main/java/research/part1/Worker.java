@@ -12,7 +12,10 @@ public class Worker implements Runnable {
     private final long keepAliveTime;
     private final TimeUnit keepAliveTimeUnit;
 
-    public Worker(BlockingQueue<Runnable> queue, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+    private final CustomThreadPool pool;
+
+    public Worker(CustomThreadPool pool, BlockingQueue<Runnable> queue, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+        this.pool = pool;
         this.queue = queue;
         this.isTerminated = false;
         this.keepAliveTime = keepAliveTime;
@@ -22,9 +25,12 @@ public class Worker implements Runnable {
     @Override
     public void run() {
         while (!isTerminated) {
+            pool.onWorkerIdle();
+            Runnable task = null;
             try {
-                Runnable task = queue.poll(keepAliveTime, keepAliveTimeUnit);
+                task = queue.poll(keepAliveTime, keepAliveTimeUnit);
                 if (task != null) {
+                    pool.onWorkerBusy();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " начинает выполнение задачи.");
                     task.run();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " завершил выполнение задачи.");
@@ -34,8 +40,14 @@ public class Worker implements Runnable {
                 }
             } catch (InterruptedException e) {
                 isTerminated = true;
+            } finally {
+                if (task != null) {
+                    pool.taskCompleted();
+                    LOG.info("[Worker] " + Thread.currentThread().getName() + " завершает выполнение задачи");
+                }
             }
         }
+        pool.onWorkerExit(this);
     }
 
     void terminate() {
