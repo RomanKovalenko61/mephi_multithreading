@@ -1,6 +1,7 @@
 package research.part1;
 
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,11 +18,12 @@ public class CustomThreadPool implements CustomExecutor {
     private int minSpareThreads;
 
     private ThreadFactory threadFactory;
-    private Queue<Worker> workers;
-    private BlockingQueue<Runnable> workQueue;
+    private final List<Worker> workers = new ArrayList<>();
+    private final List<BlockingQueue<Runnable>> workerQueues = new ArrayList<>();
     private AtomicBoolean isShutdown = new AtomicBoolean(false);
     private AtomicInteger countWorkers = new AtomicInteger(0);
     private AtomicInteger idleWorkers = new AtomicInteger(0);
+    private final AtomicInteger RoundRobinIndex = new AtomicInteger(0);
     private RejectPolicy rejectPolicy = new AbortPolicy();
 
     public CustomThreadPool(int corePoolSize, int maxPoolSize, int keepAliveTime, TimeUnit timeUnit,
@@ -33,8 +35,6 @@ public class CustomThreadPool implements CustomExecutor {
         this.queueSize = queueSize;
         this.minSpareThreads = minSpareThreads;
         this.threadFactory = new ThreadFactoryImpl();
-        workers = new ArrayBlockingQueue<>(maxPoolSize);
-        workQueue = new LinkedBlockingQueue<>(queueSize);
         initializeWorkers();
     }
 
@@ -42,10 +42,12 @@ public class CustomThreadPool implements CustomExecutor {
         this.rejectPolicy = rejectPolicy;
     }
 
-    private void createWorker() {
+    private synchronized void createWorker() {
         if (workers.size() < maxPoolSize) {
-            Worker worker = new Worker(this, workQueue, keepAliveTime, timeUnit);
-            workers.offer(worker);
+            BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
+            Worker worker = new Worker(this, queue, keepAliveTime, timeUnit);
+            workers.add(worker);
+            workerQueues.add(queue);
             threadFactory.newThread(worker).start();
             countWorkers.incrementAndGet();
         }
@@ -68,34 +70,45 @@ public class CustomThreadPool implements CustomExecutor {
         idleWorkers.decrementAndGet();
     }
 
-    protected void taskCompleted() {
-        countWorkers.decrementAndGet();
-    }
-
-    protected void onWorkerExit(Worker worker) {
-        workers.remove(worker);
+    protected synchronized void onWorkerExit(Worker worker) {
+        int idx = workers.indexOf(worker);
+        if (idx >= 0) {
+            workers.remove(idx);
+            workerQueues.remove(idx);
+            countWorkers.decrementAndGet();
+        }
     }
 
     @Override
     public synchronized void execute(Runnable command) {
         if (isShutdown.get()) {
             LOG.warning("[Pool] Попытка выполнить задачу после остановки пула потоков.");
-            //throw new RejectedExecutionException("Пул потоков остановлен, добавление новой задачи невозможно.");
+            throw new RejectedExecutionException("Пул потоков остановлен, добавление новой задачи невозможно.");
         }
-        if (workQueue.size() >= queueSize) {
-            LOG.warning("[Pool] Очередь задач переполнена. Применение политики отклонения.");
+        if (workers.isEmpty()) {
+            createWorker();
+        }
+        int idx = RoundRobinIndex.getAndIncrement() % workerQueues.size();
+        BlockingQueue<Runnable> queue = workerQueues.get(idx);
+        if (!queue.offer(command)) {
+            LOG.warning("[Pool] Очередь задач #" + idx + " переполнена. Применение политики отклонения.");
             rejectPolicy.handle(command);
+        } else {
+            LOG.info("[Pool] Добавление задачи в очередь #" + idx);
         }
-        LOG.info("[Pool] Добавление задачи в очередь");
-        workQueue.offer(command);
-        if (!workQueue.isEmpty()) {
+        if (countWorkers.get() < maxPoolSize && !queue.isEmpty()) {
             createWorker();
         }
     }
 
     @Override
     public <T> Future<T> submit(Callable<T> callable) {
-        return null;
+        if (isShutdown.get()) {
+            throw new RejectedExecutionException("Пул потоков остановлен, добавление новой задачи невозможно.");
+        }
+        FutureTask<T> task = new FutureTask<>(callable);
+        execute(task);
+        return task;
     }
 
     @Override
@@ -104,10 +117,31 @@ public class CustomThreadPool implements CustomExecutor {
         workers.forEach(Worker::terminate);
         LOG.info("[Pool] Завершение работы пула потоков.");
         workers.clear();
+        workerQueues.clear();
     }
 
     @Override
     public void shutdownNow() {
+        isShutdown.set(true);
+        LOG.info("[Pool] Принудительное завершение пула потоков.");
+        workers.forEach(Worker::terminate);
+        for (BlockingQueue<Runnable> queue : workerQueues) {
+            queue.clear();
+        }
+        workers.clear();
+        workerQueues.clear();
+        LOG.info("[Pool] Принудительное завершение пула потоков завершено.");
+    }
 
+    public int getWorkerCount() {
+        return workers.size();
+    }
+
+    public int getCorePoolSize() {
+        return corePoolSize;
+    }
+
+    public AtomicBoolean isShutdown() {
+        return isShutdown;
     }
 }

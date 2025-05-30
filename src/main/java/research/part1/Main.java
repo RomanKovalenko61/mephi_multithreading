@@ -8,10 +8,10 @@ public class Main {
     private static final Logger LOG = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) throws InterruptedException {
-        CustomThreadPool threadPool = new CustomThreadPool(2, 5, 10, TimeUnit.SECONDS, 10, 2);
+        CustomThreadPool threadPool = new CustomThreadPool(2, 4, 5, TimeUnit.SECONDS, 5, 2);
         threadPool.setRejectPolicy(new CallerRunsPolicy());
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 10; i++) {
             final int taskNumber = i;
             threadPool.execute(() -> {
                 randomSleep();

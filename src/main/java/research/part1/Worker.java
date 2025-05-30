@@ -30,19 +30,24 @@ public class Worker implements Runnable {
             try {
                 task = queue.poll(keepAliveTime, keepAliveTimeUnit);
                 if (task != null) {
+                    if (pool.isShutdown().get()) {
+                        LOG.info("[Worker] " + Thread.currentThread().getName() + " завершает работу из-за shutdown.");
+                        break;
+                    }
                     pool.onWorkerBusy();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " начинает выполнение задачи.");
                     task.run();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " завершил выполнение задачи.");
                 } else {
-                    LOG.info("[Worker] " + Thread.currentThread().getName() + " время ожидания истекло, завершение работы.");
-                    break;
+                    if (pool.getWorkerCount() > pool.getCorePoolSize()) {
+                        LOG.info("[Worker] " + Thread.currentThread().getName() + " ожидал задачи, но не получил их. Будет остановлен");
+                        break;
+                    }
                 }
             } catch (InterruptedException e) {
                 isTerminated = true;
             } finally {
                 if (task != null) {
-                    pool.taskCompleted();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " завершает выполнение задачи");
                 }
             }
