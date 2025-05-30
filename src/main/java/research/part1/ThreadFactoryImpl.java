@@ -9,6 +9,7 @@ public class ThreadFactoryImpl implements ThreadFactory {
     @Override
     public Thread newThread(Runnable r) {
         String threadName = "MyPool-worker-" + threadNumber.getAndIncrement();
+        System.out.println("[ThreadFactory] Создание нового потока: " + threadName);
         return new Thread(r, threadName);
     }
 }
