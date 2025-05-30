@@ -18,6 +18,7 @@ public class CustomThreadPool implements CustomExecutor {
     private int minSpareThreads;
 
     private ThreadFactory threadFactory;
+    private final List<Thread> workerThreads = new ArrayList<>();
     private final List<Worker> workers = new ArrayList<>();
     private final List<BlockingQueue<Runnable>> workerQueues = new ArrayList<>();
     private AtomicBoolean isShutdown = new AtomicBoolean(false);
@@ -48,7 +49,9 @@ public class CustomThreadPool implements CustomExecutor {
             Worker worker = new Worker(this, queue, keepAliveTime, timeUnit);
             workers.add(worker);
             workerQueues.add(queue);
-            threadFactory.newThread(worker).start();
+            Thread thread = threadFactory.newThread(worker);
+            workerThreads.add(thread);
+            thread.start();
             countWorkers.incrementAndGet();
         }
     }
@@ -84,9 +87,6 @@ public class CustomThreadPool implements CustomExecutor {
         if (isShutdown.get()) {
             LOG.warning("[Pool] Попытка выполнить задачу после остановки пула потоков.");
             throw new RejectedExecutionException("Пул потоков остановлен, добавление новой задачи невозможно.");
-        }
-        if (workers.isEmpty()) {
-            createWorker();
         }
         int idx = RoundRobinIndex.getAndIncrement() % workerQueues.size();
         BlockingQueue<Runnable> queue = workerQueues.get(idx);
@@ -125,20 +125,27 @@ public class CustomThreadPool implements CustomExecutor {
         isShutdown.set(true);
         LOG.info("[Pool] Принудительное завершение пула потоков.");
         workers.forEach(Worker::terminate);
+
+        for (Thread t : workerThreads) {
+            t.interrupt();
+        }
+
+        List<Runnable> notExecuted = new ArrayList<>();
         for (BlockingQueue<Runnable> queue : workerQueues) {
+            queue.drainTo(notExecuted);
             queue.clear();
         }
         workers.clear();
         workerQueues.clear();
-        LOG.info("[Pool] Принудительное завершение пула потоков завершено.");
+        LOG.info("[Pool] Принудительное завершение пула потоков завершено. Отменено задач: " + notExecuted.size());
     }
 
     public int getWorkerCount() {
         return workers.size();
     }
 
-    public int getCorePoolSize() {
-        return corePoolSize;
+    public int getMinSpareThreads() {
+        return minSpareThreads;
     }
 
     public AtomicBoolean isShutdown() {

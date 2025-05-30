@@ -11,7 +11,7 @@ public class Main {
         CustomThreadPool threadPool = new CustomThreadPool(2, 4, 5, TimeUnit.SECONDS, 5, 2);
         threadPool.setRejectPolicy(new CallerRunsPolicy());
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
             final int taskNumber = i;
             threadPool.execute(() -> {
                 randomSleep();
@@ -19,8 +19,8 @@ public class Main {
             });
         }
 
-        Thread.sleep(3000);
-        threadPool.shutdown();
+        Thread.sleep(1000);
+        threadPool.shutdownNow();
         threadPool.execute(() -> {
             System.out.println("!!!! Task after shutdown attempt.");
         });
@@ -28,9 +28,9 @@ public class Main {
 
     public static void randomSleep() {
         try {
-            Thread.sleep(new Random().nextInt(10000));
+            Thread.sleep(new Random().nextInt(6000));
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.warning("[MAIN] Interrupt task when it sleep");
         }
     }
 }

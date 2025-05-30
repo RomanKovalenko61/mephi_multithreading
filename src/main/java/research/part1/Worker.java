@@ -29,6 +29,10 @@ public class Worker implements Runnable {
             Runnable task = null;
             try {
                 task = queue.poll(keepAliveTime, keepAliveTimeUnit);
+                if (Thread.currentThread().isInterrupted()) {
+                    LOG.warning("[Worker] " + Thread.currentThread().getName() + " обнаружил прерывание.");
+                    break;
+                }
                 if (task != null) {
                     if (pool.isShutdown().get()) {
                         LOG.info("[Worker] " + Thread.currentThread().getName() + " завершает работу из-за shutdown.");
@@ -39,13 +43,13 @@ public class Worker implements Runnable {
                     task.run();
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " завершил выполнение задачи.");
                 } else {
-                    if (pool.getWorkerCount() > pool.getCorePoolSize()) {
+                    if (pool.getWorkerCount() > pool.getMinSpareThreads()) {
                         LOG.info("[Worker] " + Thread.currentThread().getName() + " ожидал задачи, но не получил их. Будет остановлен");
                         break;
                     }
                 }
             } catch (InterruptedException e) {
-                isTerminated = true;
+                LOG.warning("[Worker] " + Thread.currentThread().getName() + " был прерван: " + e.getMessage());
             } finally {
                 if (task != null) {
                     LOG.info("[Worker] " + Thread.currentThread().getName() + " завершает выполнение задачи");
