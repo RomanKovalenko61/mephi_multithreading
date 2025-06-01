@@ -99,5 +99,38 @@ public class Main {
                 .subscribe(threadsObserver);
 
         Thread.sleep(2500);
+        System.out.println("Тестируем flatMap...");
+
+        Observable<Integer> flatMapSource = Observable.create(emitter -> {
+            System.out.println("[FlatMap Source] Передаем число 5");
+            emitter.onNext(5);
+            System.out.println("[FlatMap Source] Передаем число 10");
+            emitter.onNext(10);
+            emitter.onComplete();
+        });
+
+        flatMapSource.flatMap(x -> {
+            System.out.println("[FlatMap] Запускаем преобразование");
+            return Observable.create(innerEmitter -> {
+                innerEmitter.onNext(x * 2);
+                innerEmitter.onNext(x * 10);
+                innerEmitter.onComplete();
+            });
+        }).subscribe(new Observer<>() {
+            @Override
+            public void onNext(Object item) {
+                System.out.println("[FlatMap Observer] Получено: " + item + " (Преобразованное число) ");
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.out.println("[FlatMap Observer] Ошибка: " + t.getMessage());
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println("[FlatMap Observer] Завершено");
+            }
+        });
     }
 }

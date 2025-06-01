@@ -22,9 +22,45 @@ public class Observable<T> {
         return safe;
     }
 
+    public <R> Observable<R> flatMap(Function<? super T, Observable<R>> mapper) {
+        return new Observable<>(emitter ->
+                this.subscribe(new SafeObserver<>(new Observer<T>() {
+                    @Override
+                    public void onNext(T item) {
+                        mapper.apply(item).subscribe(new Observer<R>() {
+                            @Override
+                            public void onNext(R innerItem) {
+                                emitter.onNext(innerItem);
+                            }
+
+                            @Override
+                            public void onError(Throwable t) {
+                                emitter.onError(t);
+                            }
+
+                            @Override
+                            public void onComplete() {
+                                // пусто
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        emitter.onError(t);
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        emitter.onComplete();
+                    }
+                }))
+        );
+    }
+
     public <R> Observable<R> map(Function<? super T, ? extends R> mapper) {
         return new Observable<>(downstream ->
-                Observable.this.subscribe(new Observer<T>() {
+                Observable.this.subscribe(new SafeObserver<>(new Observer<>() {
                     @Override
                     public void onNext(T item) {
                         downstream.onNext(mapper.apply(item));
@@ -39,13 +75,13 @@ public class Observable<T> {
                     public void onComplete() {
                         downstream.onComplete();
                     }
-                })
+                }))
         );
     }
 
     public Observable<T> filter(Predicate<? super T> predicate) {
         return new Observable<>(downstream ->
-                Observable.this.subscribe(new Observer<T>() {
+                Observable.this.subscribe(new SafeObserver<>(new Observer<>() {
                     @Override
                     public void onNext(T item) {
                         if (predicate.test(item)) {
@@ -62,7 +98,7 @@ public class Observable<T> {
                     public void onComplete() {
                         downstream.onComplete();
                     }
-                })
+                }))
         );
     }
 
@@ -74,7 +110,7 @@ public class Observable<T> {
 
     public Observable<T> observeOn(Scheduler scheduler) {
         return new Observable<>(downstream ->
-                Observable.this.subscribe(new SafeObserver<>(new Observer<T>() {
+                Observable.this.subscribe(new SafeObserver<>(new Observer<>() {
                     @Override
                     public void onNext(T item) {
                         scheduler.execute(() -> downstream.onNext(item));
