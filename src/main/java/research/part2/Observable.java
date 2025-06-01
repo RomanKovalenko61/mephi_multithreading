@@ -59,6 +59,31 @@ public class Observable<T> {
         );
     }
 
+    public Observable<T> subscribeOn(Scheduler scheduler) {
+        return new Observable<>(observer ->
+                scheduler.execute(() -> Observable.this.onSubscribe.accept(observer))
+        );
+    }
+
+    public Observable<T> observeOn(Scheduler scheduler) {
+        return new Observable<>(downstream ->
+                Observable.this.subscribe(new SafeObserver<>(new Observer<T>() {
+                    @Override
+                    public void onNext(T item) {
+                        scheduler.execute(() -> downstream.onNext(item));
+                    }
+                    @Override
+                    public void onError(Throwable t) {
+                        scheduler.execute(() -> downstream.onError(t));
+                    }
+                    @Override
+                    public void onComplete() {
+                        scheduler.execute(downstream::onComplete);
+                    }
+                }))
+        );
+    }
+
     private static class SafeObserver<T> implements Observer<T> {
         private final Observer<T> actual;
         private boolean done = false;
