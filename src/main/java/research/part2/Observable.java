@@ -1,5 +1,6 @@
 package research.part2;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -15,8 +16,10 @@ public class Observable<T> {
         return new Observable<>(onSubscribe);
     }
 
-    public void subscribe(Observer<T> observer) {
-        onSubscribe.accept(new SafeObserver<>(observer));
+    public Disposable subscribe(Observer<T> observer) {
+        SafeObserver<T> safe = new SafeObserver<>(observer);
+        onSubscribe.accept(safe);
+        return safe;
     }
 
     public <R> Observable<R> map(Function<? super T, ? extends R> mapper) {
@@ -26,10 +29,12 @@ public class Observable<T> {
                     public void onNext(T item) {
                         downstream.onNext(mapper.apply(item));
                     }
+
                     @Override
                     public void onError(Throwable t) {
                         downstream.onError(t);
                     }
+
                     @Override
                     public void onComplete() {
                         downstream.onComplete();
@@ -47,10 +52,12 @@ public class Observable<T> {
                             downstream.onNext(item);
                         }
                     }
+
                     @Override
                     public void onError(Throwable t) {
                         downstream.onError(t);
                     }
+
                     @Override
                     public void onComplete() {
                         downstream.onComplete();
@@ -72,10 +79,12 @@ public class Observable<T> {
                     public void onNext(T item) {
                         scheduler.execute(() -> downstream.onNext(item));
                     }
+
                     @Override
                     public void onError(Throwable t) {
                         scheduler.execute(() -> downstream.onError(t));
                     }
+
                     @Override
                     public void onComplete() {
                         scheduler.execute(downstream::onComplete);
@@ -84,9 +93,10 @@ public class Observable<T> {
         );
     }
 
-    private static class SafeObserver<T> implements Observer<T> {
+    private static class SafeObserver<T> implements Observer<T>, Disposable {
         private final Observer<T> actual;
-        private boolean done = false;
+        private final AtomicBoolean done = new AtomicBoolean(false);
+        private final AtomicBoolean disposed = new AtomicBoolean(false);
 
         SafeObserver(Observer<T> actual) {
             this.actual = actual;
@@ -94,23 +104,33 @@ public class Observable<T> {
 
         @Override
         public void onNext(T item) {
-            if (!done) actual.onNext(item);
+            if (!done.get() && !disposed.get()) actual.onNext(item);
         }
 
         @Override
         public void onError(Throwable t) {
-            if (!done) {
-                done = true;
+            if (!done.get() && !disposed.get()) {
+                done.set(true);
                 actual.onError(t);
             }
         }
 
         @Override
         public void onComplete() {
-            if (!done) {
-                done = true;
+            if (!done.get() && !disposed.get()) {
+                done.set(true);
                 actual.onComplete();
             }
+        }
+
+        @Override
+        public void dispose() {
+            disposed.set(true);
+        }
+
+        @Override
+        public boolean isDisposed() {
+            return disposed.get();
         }
     }
 }

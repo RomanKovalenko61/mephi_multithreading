@@ -1,7 +1,7 @@
 package research.part2;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("RxJava Research Part 2");
 
         var integerObserver = new Observer<Integer>() {
@@ -61,6 +61,9 @@ public class Main {
             }
         };
 
+        System.out.println("Запускаем в разных потоках...");
+        Thread.sleep(1000);
+
         Observable<Integer> observable3 = Observable.create(emitter -> {
             System.out.println("[Observable] [Emitter: 100] Запуск в потоке: " + Thread.currentThread().getName());
             emitter.onNext(100);
@@ -75,27 +78,26 @@ public class Main {
                 .observeOn(io)
                 //.observeOn(single)
                 //.observeOn(computation)
-                .map(x -> x + 1)
+                .map(x -> x + 10)
                 .filter(x -> x > 100)
                 .subscribe(threadsObserver);
 
+        Thread.sleep(2000);
+        System.out.println("Запускаем в потоке main...");
+
         Observable<Integer> observable4 = Observable.create(emitter -> {
-            System.out.println("[Observable] [Emitter: 100] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
-            emitter.onNext(100);
-            System.out.println("[Observable] [Emitter: 200] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
-            emitter.onNext(200);
-            System.out.println("[Observable] [Emitter: 300] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
-            emitter.onNext(300);
+            System.out.println("[Observable] [Emitter: 500] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
+            emitter.onNext(500);
+            System.out.println("[Observable] [Emitter: 700] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
+            emitter.onNext(700);
+            System.out.println("[Observable] [Emitter: 900] Проверь запущен в потоке main?: " + Thread.currentThread().getName());
+            emitter.onNext(900);
             emitter.onComplete();
         });
         observable4.map(x -> x + 1)
                 .filter(x -> x > 100)
                 .subscribe(threadsObserver);
 
-        try {
-            Thread.sleep(2500);
-        } catch (InterruptedException e) {
-            System.out.println("Ошибка при ожидании: " + e.getMessage());
-        }
+        Thread.sleep(2500);
     }
 }
