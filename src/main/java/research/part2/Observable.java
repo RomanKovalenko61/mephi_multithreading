@@ -1,6 +1,8 @@
 package research.part2;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Observable<T> {
     private final Consumer<Observer<T>> onSubscribe;
@@ -15,6 +17,46 @@ public class Observable<T> {
 
     public void subscribe(Observer<T> observer) {
         onSubscribe.accept(new SafeObserver<>(observer));
+    }
+
+    public <R> Observable<R> map(Function<? super T, ? extends R> mapper) {
+        return new Observable<>(downstream ->
+                Observable.this.subscribe(new Observer<T>() {
+                    @Override
+                    public void onNext(T item) {
+                        downstream.onNext(mapper.apply(item));
+                    }
+                    @Override
+                    public void onError(Throwable t) {
+                        downstream.onError(t);
+                    }
+                    @Override
+                    public void onComplete() {
+                        downstream.onComplete();
+                    }
+                })
+        );
+    }
+
+    public Observable<T> filter(Predicate<? super T> predicate) {
+        return new Observable<>(downstream ->
+                Observable.this.subscribe(new Observer<T>() {
+                    @Override
+                    public void onNext(T item) {
+                        if (predicate.test(item)) {
+                            downstream.onNext(item);
+                        }
+                    }
+                    @Override
+                    public void onError(Throwable t) {
+                        downstream.onError(t);
+                    }
+                    @Override
+                    public void onComplete() {
+                        downstream.onComplete();
+                    }
+                })
+        );
     }
 
     private static class SafeObserver<T> implements Observer<T> {
