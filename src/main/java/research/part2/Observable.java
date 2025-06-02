@@ -24,10 +24,10 @@ public class Observable<T> {
 
     public <R> Observable<R> flatMap(Function<? super T, Observable<R>> mapper) {
         return new Observable<>(emitter ->
-                this.subscribe(new SafeObserver<>(new Observer<T>() {
+                this.subscribe(new SafeObserver<>(new Observer<>() {
                     @Override
                     public void onNext(T item) {
-                        mapper.apply(item).subscribe(new Observer<R>() {
+                        mapper.apply(item).subscribe(new Observer<>() {
                             @Override
                             public void onNext(R innerItem) {
                                 emitter.onNext(innerItem);

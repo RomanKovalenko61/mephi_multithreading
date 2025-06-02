@@ -28,7 +28,10 @@ public class Main {
             emitter.onNext(3);
             emitter.onComplete();
         });
-        observable.subscribe(integerObserver);
+        var subscribe = observable.subscribe(integerObserver);
+        System.out.println("Проверка отмены подписки" + subscribe.isDisposed());
+        subscribe.dispose();
+        System.out.println("Проверка после вызова метода dispose(): " + subscribe.isDisposed());
 
         Observable<Integer> observable2 = Observable.create(emitter -> {
             emitter.onNext(1);
@@ -42,7 +45,7 @@ public class Main {
 
         Scheduler io = new IOThreadScheduler();
         Scheduler single = new SingleThreadScheduler();
-        Scheduler computation = new ComputationScheduler();
+        //Scheduler computation = new ComputationScheduler();
 
         Observer<Integer> threadsObserver = new Observer<>() {
             @Override
